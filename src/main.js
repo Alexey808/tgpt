@@ -34,6 +34,10 @@ bot.on(message('text'), async (ctx) => {
 
 /** Запуск бота */
 bot.launch();
+console.info('------------------------------');
+console.info('env:', config.get('ENV_NAME'));
+console.info('------------------------------');
+
 
 /** Обработка события SIGINT(прерывания) и SIGTERM(завершения), для корректной остановки бота */
 process.once('SIGINT', () => bot.store('SIGINT'));
