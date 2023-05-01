@@ -1,4 +1,5 @@
-import {openai} from "./openai.js";
+import { openai } from "./openai.js";
+import { code } from "telegraf/format";
 
 export function initSession(ctx) {
   ctx.session = new Map();
@@ -66,4 +67,8 @@ export function getUserSession(ctx) {
 
 export function getUserId(ctx) {
   return ctx.message.from.id;
+}
+
+export async function displayMessage(ctx, message, isSystemInfo = true) {
+  return await ctx.reply(isSystemInfo ? code(message) : message);
 }

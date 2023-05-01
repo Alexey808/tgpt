@@ -5,6 +5,7 @@ import { code } from 'telegraf/format';
 import config from 'config';
 import {
   checkSession,
+  displayMessage,
   getUserId,
   getUserSession,
   initSession,
@@ -12,7 +13,10 @@ import {
   updateSessionWithAssistantRole,
   updateSessionWithUserRole
 } from "./main-helper.js";
-import { getIsContextByUserId, setIsContextByUserId } from "./personal-bot-settings.js";
+import {
+  getIsContextByUserId,
+  setIsContextByUserId
+} from "./personal-bot-settings.js";
 
 
 /** Создание бота */
@@ -43,22 +47,27 @@ bot.command('off_context', async (ctx) => {
 /** Обработка текстовых событий */
 bot.on(message('text'), async (ctx) => {
   const isContext = getIsContextByUserId(getUserId(ctx));
-  await ctx.reply(code('...'));
+
+  await displayMessage(ctx, '...');
+
   checkSession(ctx);
   updateSessionWithUserRole(ctx, isContext);
-  const response = await openai.chat(getUserSession(ctx));
-  if (isContext) {
-    updateSessionWithAssistantRole(ctx, response);
-  }
 
-  if (response?.content) {
-    await ctx.reply(response.content);
+  const response = await openai.chat(getUserSession(ctx));
+
+  if (response?.data) {
+    const totalTokens = response.data?.usage.total_tokens;
+    const message = response.data?.choices[0].message;
+
+    await displayMessage(ctx, `Сложность запроса составила: ${totalTokens} токенов из ${4096}`);
+
+    if (isContext) {
+      updateSessionWithAssistantRole(ctx, message);
+    }
+
+    await displayMessage(ctx, message.content, false);
   } else {
-    await ctx.reply(
-      code(
-        JSON.stringify(response, null, 2)
-      )
-    )
+    await displayMessage(ctx, response.errorMessage);
   }
 });
 
@@ -80,6 +89,14 @@ async function debugCheckContextLength(ctx) {
   return await ctx.reply(
     code(
       JSON.stringify('Длина контекста: ' + getUserSession(ctx).length, null, 2)
+    )
+  );
+}
+
+async function debugCheckResponseData(ctx, data) {
+  return await ctx.reply(
+    code(
+      JSON.stringify(data, null, 2)
     )
   );
 }

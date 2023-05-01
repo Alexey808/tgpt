@@ -1,5 +1,6 @@
 import { Configuration, OpenAIApi } from "openai";
 import config from "config";
+import { getErrorMessage } from "./openai-helper.js";
 
 class OpenAI {
   roles = {
@@ -17,13 +18,12 @@ class OpenAI {
 
   async chat(messages) {
     try {
-      const response = await this.openai.createChatCompletion({
+      return await this.openai.createChatCompletion({
         model: 'gpt-3.5-turbo',
         messages: messages
       });
-      return response.data.choices[0].message;
-    } catch (e) {
-      console.error('Error: ', e.message);
+    } catch (data) {
+      return getErrorMessage(data.response);
     }
   }
 }
