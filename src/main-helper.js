@@ -63,3 +63,7 @@ function updateUserSessionWithOverwrite(ctx, newMessage) {
 export function getUserSession(ctx) {
   return ctx.session.get(ctx.message.from.id);
 }
+
+export function getUserId(ctx) {
+  return ctx.message.from.id;
+}

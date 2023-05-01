@@ -1,18 +1,18 @@
-import { Telegraf, session } from 'telegraf';
+import { session, Telegraf } from 'telegraf';
 import { message } from 'telegraf/filters';
 import { openai } from './openai.js';
 import { code } from 'telegraf/format';
 import config from 'config';
 import {
   checkSession,
+  getUserId,
   getUserSession,
   initSession,
   resetUserSession,
   updateSessionWithAssistantRole,
   updateSessionWithUserRole
 } from "./main-helper.js";
-import { botSettings } from "./bot-settings.js";
-
+import { getIsContextByUserId, setIsContextByUserId } from "./personal-bot-settings.js";
 
 
 /** Создание бота */
@@ -32,24 +32,34 @@ bot.command('reset', async (ctx) => {
   await ctx.reply(code('Контекст сброшен'));
 });
 bot.command('on_context', async (ctx) => {
-  botSettings.isContext = true;
+  setIsContextByUserId(getUserId(ctx), true);
   await ctx.reply(code('Контекст включен'));
 });
 bot.command('off_context', async (ctx) => {
-  botSettings.isContext = false;
+  setIsContextByUserId(getUserId(ctx), false);
   await ctx.reply(code('Контекст выключен'));
 });
 
 /** Обработка текстовых событий */
 bot.on(message('text'), async (ctx) => {
+  const isContext = getIsContextByUserId(getUserId(ctx));
   await ctx.reply(code('...'));
   checkSession(ctx);
-  updateSessionWithUserRole(ctx, botSettings.isContext);
+  updateSessionWithUserRole(ctx, isContext);
   const response = await openai.chat(getUserSession(ctx));
-  if (botSettings.isContext) {
+  if (isContext) {
     updateSessionWithAssistantRole(ctx, response);
   }
-  await ctx.reply(response.content);
+
+  if (response?.content) {
+    await ctx.reply(response.content);
+  } else {
+    await ctx.reply(
+      code(
+        JSON.stringify(response, null, 2)
+      )
+    )
+  }
 });
 
 
@@ -57,13 +67,22 @@ bot.on(message('text'), async (ctx) => {
 bot.launch();
 console.info('------------------------------');
 console.info('env:', config.get('ENV_NAME'));
-console.info('context:', botSettings.isContext);
 console.info('------------------------------');
 
 
 /** Обработка события SIGINT(прерывания) и SIGTERM(завершения), для корректной остановки бота */
 process.once('SIGINT', () => bot.store('SIGINT'));
 process.once('SIGTERM', () => bot.store('SIGTERM'));
+
+
+
+async function debugCheckContextLength(ctx) {
+  return await ctx.reply(
+    code(
+      JSON.stringify('Длина контекста: ' + getUserSession(ctx).length, null, 2)
+    )
+  );
+}
 
 
 
