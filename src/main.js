@@ -35,11 +35,11 @@ bot.command('reset', async (ctx) => {
   resetUserSession(ctx);
   await ctx.reply(code('Контекст сброшен'));
 });
-bot.command('on_context', async (ctx) => {
+bot.command('context_on', async (ctx) => {
   setIsContextByUserId(getUserId(ctx), true);
   await ctx.reply(code('Контекст включен'));
 });
-bot.command('off_context', async (ctx) => {
+bot.command('context_off', async (ctx) => {
   setIsContextByUserId(getUserId(ctx), false);
   await ctx.reply(code('Контекст выключен'));
 });
