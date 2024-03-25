@@ -19,4 +19,4 @@ ENV PORT=3000
 EXPOSE $PORT
 
 # Команда для запуска приложения в контейнере
-CMD [ "npm", "start" ]
+CMD [ "npm", "start", "prod" ]
