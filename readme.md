@@ -14,3 +14,12 @@
 `docker images` - вывести список образов  
 `docker stop IMAGE_NAME` - остановка контейнера  
 `docker restart tgpt` - перезапуск контейнера  
+
+
+
+## Ресурсы  
+
+- chat.openai.com
+- chat.gpt4free.io  
+
+

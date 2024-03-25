@@ -1,6 +1,7 @@
 import { session, Telegraf } from 'telegraf';
 import { message } from 'telegraf/filters';
 import { openai } from './openai.js';
+import { demoGpt } from './api-demo-service.js'
 import { code } from 'telegraf/format';
 import config from 'config';
 import {
@@ -46,15 +47,41 @@ bot.command('context_off', async (ctx) => {
 
 /** Обработка текстовых событий */
 bot.on(message('text'), async (ctx) => {
-  const isContext = getIsContextByUserId(getUserId(ctx));
+    const isContext = getIsContextByUserId(getUserId(ctx));
 
-  await displayMessage(ctx, '...');
+    await displayMessage(ctx, '...');
+  
+    checkSession(ctx);
+    updateSessionWithUserRole(ctx, isContext);
+  
+  
+    /** chat.openai.com */
+    // const response = await openai.chat(getUserSession(ctx));
+    // await chatOpenaiHandler(ctx, isContext, response);
+  
+    /** chat.gpt4free.io */ 
+    const response = await demoGpt.chat(getUserSession(ctx));
+    await chatGptFreeHandler(ctx, isContext, response);
+});
 
-  checkSession(ctx);
-  updateSessionWithUserRole(ctx, isContext);
+async function chatGptFreeHandler(ctx, isContext, response) {
+  if (response?.success) {
+    const totalTokens = response.usage.total_tokens;
+    const textContent = response.reply;
 
-  const response = await openai.chat(getUserSession(ctx));
+    await displayMessage(ctx, `Сложность запроса составила: ${totalTokens}`);
 
+    if (isContext) {
+      updateSessionWithAssistantRole(ctx, textContent);
+    }
+
+    await displayMessage(ctx, textContent, false);
+  } else {
+    await displayMessage(ctx, response);
+  }
+}
+
+async function chatOpenaiHandler(ctx, isContext, response) {
   if (response?.data) {
     const totalTokens = response.data?.usage.total_tokens;
     const message = response.data?.choices[0].message;
@@ -62,14 +89,14 @@ bot.on(message('text'), async (ctx) => {
     await displayMessage(ctx, `Сложность запроса составила: ${totalTokens} токенов из ${4096}`);
 
     if (isContext) {
-      updateSessionWithAssistantRole(ctx, message);
+      updateSessionWithAssistantRole(ctx, message.content);
     }
 
     await displayMessage(ctx, message.content, false);
   } else {
     await displayMessage(ctx, response.errorMessage);
   }
-});
+}
 
 
 /** Запуск бота */

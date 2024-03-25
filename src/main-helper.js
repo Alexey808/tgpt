@@ -35,10 +35,10 @@ export function updateSessionWithUserRole(ctx, isContextOn) {
   }
 }
 
-export function updateSessionWithAssistantRole(ctx, response) {
+export function updateSessionWithAssistantRole(ctx, content) {
   updateUserSession(ctx, {
     role: openai.roles.ASSISTANT,
-    content: response.content
+    content: content
   });
 }
 
