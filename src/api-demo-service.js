@@ -1,3 +1,5 @@
+import fetch from "node-fetch";
+
 export class ApiDemoService {
   async chat(messages) {
     const lastMessage = (messages || []).slice().reverse()[0];
