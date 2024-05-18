@@ -1,7 +1,6 @@
 import { session, Telegraf } from 'telegraf';
 import { message } from 'telegraf/filters';
 import { openai } from './openai.js';
-import { demoGpt } from './api-demo-service.js'
 import { code } from 'telegraf/format';
 import config from 'config';
 import {
@@ -18,6 +17,7 @@ import {
   getIsContextByUserId,
   setIsContextByUserId
 } from "./personal-bot-settings.js";
+import { yaGptApi } from './api/ya-gpt-service-api.js';
 
 
 /** Создание бота */
@@ -50,19 +50,34 @@ bot.on(message('text'), async (ctx) => {
     const isContext = getIsContextByUserId(getUserId(ctx));
 
     await displayMessage(ctx, '...');
-  
+
     checkSession(ctx);
     updateSessionWithUserRole(ctx, isContext);
-  
-  
+
+
     /** chat.openai.com */
     // const response = await openai.chat(getUserSession(ctx));
+    // this.debugCheckResponseData(ctx, response);
     // await chatOpenaiHandler(ctx, isContext, response);
-  
-    /** chat.gpt4free.io */ 
-    const response = await demoGpt.chat(getUserSession(ctx));
-    await chatGptFreeHandler(ctx, isContext, response);
+
+    /** chat.gpt4free.io */
+    // const response = await demoGpt.chat(getUserSession(ctx));
+    // await chatGptFreeHandler(ctx, isContext, response);
+
+    /** yandex-gpt */
+    // const response = await yaGptApi.chat(getUserSession(ctx));
+    // console.log('main > response > ', response);
+    // await chatYaGptHandler(ctx, isContext, response);
 });
+
+async function chatYaGptHandler(ctx, isContext, response) {
+  await displayMessage(ctx, JSON.stringify(response));
+  // if (response?.success) {
+  //   await displayMessage(ctx, JSON.stringify(response));
+  // } else {
+  //   await displayMessage(ctx, JSON.stringify(response));
+  // }
+}
 
 async function chatGptFreeHandler(ctx, isContext, response) {
   if (response?.success) {
@@ -77,7 +92,7 @@ async function chatGptFreeHandler(ctx, isContext, response) {
 
     await displayMessage(ctx, textContent, false);
   } else {
-    await displayMessage(ctx, response);
+    await displayMessage(ctx, JSON.stringify(response));
   }
 }
 

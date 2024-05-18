@@ -1,6 +1,6 @@
 import fetch from "node-fetch";
 
-export class ApiDemoService {
+export class DemoGptApi {
   async chat(messages) {
     const lastMessage = (messages || []).slice().reverse()[0];
 
@@ -37,4 +37,4 @@ export class ApiDemoService {
   }
 }
 
-export const demoGpt = new ApiDemoService();
+export const demoGptApi = new DemoGptApi();

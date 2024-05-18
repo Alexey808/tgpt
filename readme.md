@@ -22,4 +22,8 @@
 - chat.openai.com
 - chat.gpt4free.io  
 
+---
+https://yandex.cloud/ru/docs/foundation-models/text-generation/api-ref/TextGeneration/completion
+https://yandex.cloud/ru/docs/foundation-models/concepts/yandexgpt/
+https://billing.yandex.cloud/accounts/dn2j1ste25b93h9bsfcn/special-offers?tab=prices
 
