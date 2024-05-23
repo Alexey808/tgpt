@@ -1,3 +1,5 @@
+import fetch from "node-fetch";
+
 const currencyMap = new Map();
 
 
@@ -16,12 +18,10 @@ export function initTimeUsdRub() {
 }
 
 export function getUsdRub() {
-  if (currencyMap.has('usdrub')) {
-    return currencyMap.get('usdrub');
-  }
+  return currencyMap.has('usdrub') ? currencyMap.get('usdrub') : 0;
 }
 
-async function loadUsdRub() {
+export async function loadUsdRub() {
   try {
     const response = await fetch('https://www.cbr-xml-daily.ru/daily_json.js');
     const data = await response.json();

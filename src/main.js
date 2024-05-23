@@ -21,7 +21,7 @@ import {GPT3_MODEL_INFO, GPT4_MODEL_INFO, GPT_MODEL} from "./constants/gpt-model
 import {YA_GPT_MODEL, YA_GPT_MODEL_INFO} from "./constants/ya-gpt-model.const.js";
 import {chatYaGptHandler, getErrorMessageForYaGptModel, getYaMessageArray} from "./helpers/ya-gpt.helper.js";
 import {chatGptHandler, getErrorMessageForGptModel, getGptMessageArray} from "./helpers/gpt.helper.js";
-import {getUsdRub, initTimeUsdRub} from "./modules/currentcy-rate/currency-rate.js";
+import {getUsdRub, initTimeUsdRub, loadUsdRub} from "./modules/currentcy-rate/currency-rate.js";
 
 /** Создание бота */
 const bot = new Telegraf(config.get('TELEGRAM_TOKEN'));
@@ -52,6 +52,10 @@ bot.command('userId', async (ctx) => {
   await ctx.reply(`${getUserIdFromCommand(ctx)}`);
 });
 
+bot.command('load_usd', () => {
+  loadUsdRub();
+});
+
 bot.command('select_model', async (ctx) => {
   await ctx.reply('Выберите модель:', Markup.inlineKeyboard([
     [Markup.button.callback('GPT-3.5 Turbo', 'selectGpt3')],
@@ -64,9 +68,11 @@ bot.command('select_model', async (ctx) => {
  * События бота
  */
 bot.action('selectGpt3', async (ctx) => {
+  const inputPriceByRub = getUsdRub() ? `(${(GPT3_MODEL_INFO.inputPrice * getUsdRub()).toFixed(3)}₽)` : '';
+  const outputPriceByRub = getUsdRub() ? `(${(GPT3_MODEL_INFO.outputPrice * getUsdRub()).toFixed(3)}₽)` : '';
   const data = `**GPT-3.5 Turbo** (gpt-3.5-turbo-0125)
-  - стоимость ввода 1000 токенов = ${GPT3_MODEL_INFO.inputPrice}$ (${GPT3_MODEL_INFO.inputPrice * getUsdRub()}₽)
-  - стоимость вывода 1000 токенов = ${GPT3_MODEL_INFO.outputPrice}$ (${GPT3_MODEL_INFO.outputPrice * getUsdRub()}₽)
+  - стоимость ввода 1000 токенов = ${GPT3_MODEL_INFO.inputPrice}$ ${inputPriceByRub}
+  - стоимость вывода 1000 токенов = ${GPT3_MODEL_INFO.outputPrice}$ ${outputPriceByRub}
   - лимит ввода ${GPT3_MODEL_INFO.inputLimit} токенов на вывод
   - лимит вывода ${GPT3_MODEL_INFO.outputLimit} токенов
   _Контекст модели в боте не предусмотрен_`;
@@ -75,9 +81,11 @@ bot.action('selectGpt3', async (ctx) => {
 });
 
 bot.action('selectGpt4', async (ctx) => {
+  const inputPriceByRub = getUsdRub() ? `(${(GPT4_MODEL_INFO.inputPrice * getUsdRub()).toFixed(3)}₽)` : '';
+  const outputPriceByRub = getUsdRub() ? `(${(GPT4_MODEL_INFO.outputPrice * getUsdRub()).toFixed(3)}₽)` : '';
   const data = `**GPT-4o** (gpt-4o-2024-05-13)
-  - стоимость ввода 1000 токенов = ${GPT4_MODEL_INFO.inputPrice}$ (${GPT4_MODEL_INFO.inputPrice * getUsdRub()}₽)
-  - стоимость вывода 1000 токенов = ${GPT4_MODEL_INFO.outputPrice}$ (${GPT4_MODEL_INFO.outputPrice * getUsdRub()}₽)
+  - стоимость ввода 1000 токенов = ${GPT4_MODEL_INFO.inputPrice}$ ${inputPriceByRub}
+  - стоимость вывода 1000 токенов = ${GPT4_MODEL_INFO.outputPrice}$ ${outputPriceByRub}
   - лимит ввода ${GPT4_MODEL_INFO.inputLimit} токенов на вывод
   - лимит вывода ??? токенов
   _Контекст модели в боте не предусмотрен_`;
