@@ -1,5 +1,5 @@
-import { openai } from "./openai.js";
-import { code } from "telegraf/format";
+import {openai} from "../../api/gpt.api.js";
+import {ROLE} from "../../constants/model-role.conts.js";
 
 export function initSession(ctx) {
   ctx.session = new Map();
@@ -24,7 +24,7 @@ export function checkSession(ctx) {
 
 export function updateSessionWithUserRole(ctx, isContextOn) {
   const newMessage = {
-    role: openai.roles.USER,
+    role: ROLE.USER,
     content: ctx.message.text
   };
 
@@ -37,7 +37,7 @@ export function updateSessionWithUserRole(ctx, isContextOn) {
 
 export function updateSessionWithAssistantRole(ctx, content) {
   updateUserSession(ctx, {
-    role: openai.roles.ASSISTANT,
+    role: ROLE.ASSISTANT,
     content: content
   });
 }
@@ -63,12 +63,4 @@ function updateUserSessionWithOverwrite(ctx, newMessage) {
 
 export function getUserSession(ctx) {
   return ctx.session.get(ctx.message.from.id);
-}
-
-export function getUserId(ctx) {
-  return ctx.message.from.id;
-}
-
-export async function displayMessage(ctx, message, isSystemInfo = true) {
-  return await ctx.reply(isSystemInfo ? code(message) : message);
 }

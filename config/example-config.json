@@ -1,0 +1,15 @@
+{
+    "ENV_NAME": "dev",
+
+    "TELEGRAM_TOKEN": "token from telegram BotFather",
+
+    "OPENAI_KEY": "token form openai",
+
+    "YA_GPT_API_KEY": "key from cloud.yandex",
+    "YA_GPT_FOLDER_ID": "id from cloud.yandex",
+
+    "PROXY_IP": "ip from spaceproxy",
+    "PROXY_LOGIN": "login from spaceproxy",
+    "PROXY_PWD": "password from spaceproxy",
+    "PROXY_PORT": 0
+}

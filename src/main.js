@@ -1,117 +1,138 @@
-import { session, Telegraf } from 'telegraf';
-import { message } from 'telegraf/filters';
-import { openai } from './openai.js';
-import { code } from 'telegraf/format';
+import {Markup, Telegraf} from 'telegraf';
+import {message} from 'telegraf/filters';
+import {yaGptApi} from './api/ya-gpt.api.js';
+import {openai} from './api/gpt.api.js';
+import {code} from 'telegraf/format';
 import config from 'config';
 import {
-  checkSession,
+  displayMarkdownMessage,
   displayMessage,
-  getUserId,
-  getUserSession,
-  initSession,
-  resetUserSession,
-  updateSessionWithAssistantRole,
-  updateSessionWithUserRole
-} from "./main-helper.js";
+  getUserIdFromAction,
+  getUserIdFromCommand,
+  getUserIdFromTextEvent
+} from "./helpers/main.helper.js";
 import {
-  getIsContextByUserId,
-  setIsContextByUserId
-} from "./personal-bot-settings.js";
-import { yaGptApi } from './api/ya-gpt-service-api.js';
-
+  getUserModel,
+  initUserModels,
+  isInitUserModels,
+  setUserModel,
+} from "./modules/user-models/user-models.js";
+import {GPT3_MODEL_INFO, GPT4_MODEL_INFO, GPT_MODEL} from "./constants/gpt-model-info.const.js";
+import {YA_GPT_MODEL, YA_GPT_MODEL_INFO} from "./constants/ya-gpt-model.const.js";
+import {chatYaGptHandler, getErrorMessageForYaGptModel, getYaMessageArray} from "./helpers/ya-gpt.helper.js";
+import {chatGptHandler, getErrorMessageForGptModel, getGptMessageArray} from "./helpers/gpt.helper.js";
+import {getUsdRub, initTimeUsdRub} from "./modules/currentcy-rate/currency-rate.js";
 
 /** Создание бота */
 const bot = new Telegraf(config.get('TELEGRAM_TOKEN'));
 
-/** Подключение сессий*/
-bot.use(session());
+/** Подключение сессий (telegraf)*/
+// bot.use(session());
+
+/** Предзагрузка данных */
+initTimeUsdRub();
 
 /**
  * Команды бота
  */
 bot.command('start', async (ctx) => {
-  initSession(ctx);
-});
-bot.command('reset', async (ctx) => {
-  resetUserSession(ctx);
-  await ctx.reply(code('Контекст сброшен'));
-});
-bot.command('context_on', async (ctx) => {
-  setIsContextByUserId(getUserId(ctx), true);
-  await ctx.reply(code('Контекст включен'));
-});
-bot.command('context_off', async (ctx) => {
-  setIsContextByUserId(getUserId(ctx), false);
-  await ctx.reply(code('Контекст выключен'));
+  initUserModels(getUserIdFromCommand(ctx));
 });
 
-/** Обработка текстовых событий */
+bot.command('usd', async (ctx) => {
+  await ctx.reply(`${getUsdRub()}`);
+})
+
+bot.command('model', async (ctx) => {
+  const modelName = getUserModel(getUserIdFromCommand(ctx));
+  await ctx.reply(`${modelName ? modelName : 'Модель ещё не выбрана'}`);
+});
+
+bot.command('userId', async (ctx) => {
+  await ctx.reply(`${getUserIdFromCommand(ctx)}`);
+});
+
+bot.command('select_model', async (ctx) => {
+  await ctx.reply('Выберите модель:', Markup.inlineKeyboard([
+    [Markup.button.callback('GPT-3.5 Turbo', 'selectGpt3')],
+    [Markup.button.callback('GPT-4o', 'selectGpt4')],
+    [Markup.button.callback('YandexGPT Pro', 'selectYaGpt')],
+  ]));
+});
+
+/**
+ * События бота
+ */
+bot.action('selectGpt3', async (ctx) => {
+  const data = `**GPT-3.5 Turbo** (gpt-3.5-turbo-0125)
+  - стоимость ввода 1000 токенов = ${GPT3_MODEL_INFO.inputPrice}$ (${GPT3_MODEL_INFO.inputPrice * getUsdRub()}₽)
+  - стоимость вывода 1000 токенов = ${GPT3_MODEL_INFO.outputPrice}$ (${GPT3_MODEL_INFO.outputPrice * getUsdRub()}₽)
+  - лимит ввода ${GPT3_MODEL_INFO.inputLimit} токенов на вывод
+  - лимит вывода ${GPT3_MODEL_INFO.outputLimit} токенов
+  _Контекст модели в боте не предусмотрен_`;
+  setUserModel(getUserIdFromAction(ctx), GPT_MODEL.GPT3);
+  await displayMarkdownMessage(ctx, 'Выбрана модель: ' + data);
+});
+
+bot.action('selectGpt4', async (ctx) => {
+  const data = `**GPT-4o** (gpt-4o-2024-05-13)
+  - стоимость ввода 1000 токенов = ${GPT4_MODEL_INFO.inputPrice}$ (${GPT4_MODEL_INFO.inputPrice * getUsdRub()}₽)
+  - стоимость вывода 1000 токенов = ${GPT4_MODEL_INFO.outputPrice}$ (${GPT4_MODEL_INFO.outputPrice * getUsdRub()}₽)
+  - лимит ввода ${GPT4_MODEL_INFO.inputLimit} токенов на вывод
+  - лимит вывода ??? токенов
+  _Контекст модели в боте не предусмотрен_`;
+  setUserModel(getUserIdFromAction(ctx), GPT_MODEL.GPT4);
+  await displayMarkdownMessage(ctx, 'Выбрана модель: ' + data);
+});
+
+bot.action('selectYaGpt', async (ctx) => {
+  const data = `**YandexGPT** Pro(yandexgpt)
+  - стоимость ввода/вывода 1000 токенов = ${YA_GPT_MODEL_INFO.inputOutputPrice}₽  
+  - лимит ввода/вывода ${YA_GPT_MODEL_INFO.inputOutputLimit} токенов
+  _Контекст модели в боте не предусмотрен_`;
+  setUserModel(getUserIdFromAction(ctx), YA_GPT_MODEL.PRO);
+  await displayMarkdownMessage(ctx, 'Выбрана модель: ' + data);
+});
+
+/**
+ * Обработка текстовых событий
+ */
 bot.on(message('text'), async (ctx) => {
-    const isContext = getIsContextByUserId(getUserId(ctx));
+  const userId = getUserIdFromTextEvent(ctx);
 
-    await displayMessage(ctx, '...');
+  if (!isInitUserModels(userId)) {
+    await displayMessage(ctx, 'Выбрана модель по умолчанию GPT-3.5 Turbo, её можно изменить в меню чата', false);
+    setUserModel(userId, GPT_MODEL.GPT3);
+  }
 
-    checkSession(ctx);
-    updateSessionWithUserRole(ctx, isContext);
+  const selectedModel = getUserModel(userId);
+  await displayMessage(ctx, '...');
 
-
+  if ([GPT_MODEL.GPT3, GPT_MODEL.GPT4].includes(selectedModel)) {
     /** chat.openai.com */
-    // const response = await openai.chat(getUserSession(ctx));
-    // this.debugCheckResponseData(ctx, response);
-    // await chatOpenaiHandler(ctx, isContext, response);
+    try {
+      const response = await openai.chat(
+        getGptMessageArray(ctx.message.text),
+        getUserModel(userId)
+      );
+      await chatGptHandler(ctx, response, selectedModel);
+    } catch (e) {
+      await displayMessage(ctx, getErrorMessageForGptModel(e));
+    }
+  }
 
-    /** chat.gpt4free.io */
-    // const response = await demoGpt.chat(getUserSession(ctx));
-    // await chatGptFreeHandler(ctx, isContext, response);
-
+  if (selectedModel === YA_GPT_MODEL.PRO) {
     /** yandex-gpt */
-    // const response = await yaGptApi.chat(getUserSession(ctx));
-    // console.log('main > response > ', response);
-    // await chatYaGptHandler(ctx, isContext, response);
+    try {
+      const response = await yaGptApi.chat(
+        getYaMessageArray(ctx.message.text)
+      );
+      await chatYaGptHandler(ctx, response);
+    } catch (e) {
+      await displayMessage(ctx, getErrorMessageForYaGptModel(e));
+    }
+  }
 });
-
-async function chatYaGptHandler(ctx, isContext, response) {
-  await displayMessage(ctx, JSON.stringify(response));
-  // if (response?.success) {
-  //   await displayMessage(ctx, JSON.stringify(response));
-  // } else {
-  //   await displayMessage(ctx, JSON.stringify(response));
-  // }
-}
-
-async function chatGptFreeHandler(ctx, isContext, response) {
-  if (response?.success) {
-    const totalTokens = response.usage.total_tokens;
-    const textContent = response.reply;
-
-    await displayMessage(ctx, `Сложность запроса составила: ${totalTokens}`);
-
-    if (isContext) {
-      updateSessionWithAssistantRole(ctx, textContent);
-    }
-
-    await displayMessage(ctx, textContent, false);
-  } else {
-    await displayMessage(ctx, JSON.stringify(response));
-  }
-}
-
-async function chatOpenaiHandler(ctx, isContext, response) {
-  if (response?.data) {
-    const totalTokens = response.data?.usage.total_tokens;
-    const message = response.data?.choices[0].message;
-
-    await displayMessage(ctx, `Сложность запроса составила: ${totalTokens} токенов из ${4096}`);
-
-    if (isContext) {
-      updateSessionWithAssistantRole(ctx, message.content);
-    }
-
-    await displayMessage(ctx, message.content, false);
-  } else {
-    await displayMessage(ctx, response.errorMessage);
-  }
-}
 
 
 /** Запуск бота */
@@ -125,15 +146,6 @@ console.info('------------------------------');
 process.once('SIGINT', () => bot.store('SIGINT'));
 process.once('SIGTERM', () => bot.store('SIGTERM'));
 
-
-
-async function debugCheckContextLength(ctx) {
-  return await ctx.reply(
-    code(
-      JSON.stringify('Длина контекста: ' + getUserSession(ctx).length, null, 2)
-    )
-  );
-}
 
 async function debugCheckResponseData(ctx, data) {
   return await ctx.reply(
