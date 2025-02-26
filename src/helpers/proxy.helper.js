@@ -11,3 +11,11 @@ export function getProxyAgent() {
   })
 }
 
+export function getProxyAgentForFetch() {
+  const login = config.get('PROXY_LOGIN');
+  const pwd = config.get('PROXY_PWD');
+  const ip = config.get('PROXY_IP');
+  const port = config.get('PROXY_PORT');
+  return new HttpsProxyAgent(`http://${login}:${pwd}@${ip}:${port}`);
+}
+

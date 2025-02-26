@@ -1,6 +1,18 @@
 import { code } from "telegraf/format";
 import telegramifyMarkdown from "telegramify-markdown";
 
+/**
+ * Формирование сообщения об ошибки в запросах к моделям
+ * @param event
+ * @returns {{errorMessage: string}}
+ */
+export function getErrorMessageFromModel(event) {
+  console.log('Что-то пошло не так: ', event);
+  return {
+    errorMessage: 'Что-то пошло не так'
+  }
+}
+
 export function getUserIdFromTextEvent(ctx) {
   return ctx.update.message.from.id;
 }

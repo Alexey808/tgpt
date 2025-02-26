@@ -22,4 +22,4 @@ class GptApi {
   }
 }
 
-export const openai = new GptApi(config.get('OPENAI_KEY'));
+export const openai = new GptApi(config.get('OPENAI_API_KEY'));
